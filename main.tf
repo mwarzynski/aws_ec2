@@ -64,7 +64,7 @@ resource "aws_instance" "instance" {
     "${aws_security_group.allow_all_outbound.name}"
   ]
 
-  tags {
+  tags = {
     Name = "${var.name}-ec2"
   }
 }
