@@ -32,6 +32,20 @@ resource "aws_security_group" "allow_ssh" {
   }
 }
 
+# Allow access over HTTP.
+resource "aws_security_group" "allow_http" {
+  name        = "allow-http"
+  description = "Allow HTTP inbound traffic"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
 # Allow all outbound traffic (over all protocols).
 resource "aws_security_group" "allow_all_outbound" {
   name        = "allow-all-outbound"
@@ -60,6 +74,7 @@ resource "aws_instance" "instance" {
   key_name = "${aws_key_pair.ssh.key_name}"
 
   security_groups = [
+    "${aws_security_group.allow_http.name}",
     "${aws_security_group.allow_ssh.name}",
     "${aws_security_group.allow_all_outbound.name}"
   ]
