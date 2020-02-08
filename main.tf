@@ -82,7 +82,7 @@ resource "aws_key_pair" "ssh" {
 
 # We need the AWS AMI (Amazon Machine ID) to set up our EC2 instance.
 # Images become different as they are being upgraded. We would like to use the latest version.
-# For this purpose I defined data source being `aws_ami` which provides ID of the Xenial Ubuntu image.
+# For this purpose I defined data source being `aws_ami` which provides ID of the image.
 data "aws_ami" "ubuntu" {
   most_recent = true
 
