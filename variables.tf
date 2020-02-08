@@ -1,13 +1,13 @@
 variable "name" {
   default = "worker-instance"
-  type    = "string"
+  type    = string
 }
 
 variable "instance_type" {
   default = "t2.micro"
-  type    = "string"
+  type    = string
 }
 
 variable "myip" {
-  type    = "string"
+  type    = string
 }

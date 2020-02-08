@@ -63,15 +63,15 @@ resource "aws_security_group" "allow_all_outbound" {
 # Allows to gain access over SSH to the EC2 instance.
 resource "aws_key_pair" "ssh" {
   key_name = "${var.name}-ssh-key"
-  public_key = "${file("~/.ssh/id_rsa.pub")}"
+  public_key = file("~/.ssh/id_rsa.pub")
 }
 
 # Define the EC2 resource.
 # Use AMI (Amazon Machine ID) from the datasource defined above.
 resource "aws_instance" "instance" {
-  ami             = "${data.aws_ami.ubuntu.id}"
-  instance_type   = "${var.instance_type}"
-  key_name = "${aws_key_pair.ssh.key_name}"
+  ami             = data.aws_ami.ubuntu.id
+  instance_type   = var.instance_type
+  key_name = aws_key_pair.ssh.key_name
 
   security_groups = [
     "${aws_security_group.allow_http.name}",
