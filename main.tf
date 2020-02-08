@@ -1,5 +1,85 @@
 provider "aws" {}
 
+# Define 'Virtual Private Cloud' for the instance.
+# It allows to completely separate network only for this project.
+# (For the same reason, we don't want to use default VPC.)
+resource "aws_vpc" "cloud" {
+  cidr_block = "172.16.0.0/16"  
+
+  tags = {
+    Name = "${var.name}-cloud"
+  }
+}
+
+# Define 'Internet Gateway' as a gateway for the external network (Internet).
+resource "aws_internet_gateway" "cloud_internet" {
+  vpc_id = aws_vpc.cloud.id
+
+  tags = {
+    Name = "${var.name}-cloud-internet"
+  }
+}
+
+# Create subnet network for the EC2 instance(s).
+# Let's name it with the '1' suffix as the subnet has 16-24 bits equal to 1.
+resource "aws_subnet" "cloud1" {
+  vpc_id = aws_vpc.cloud.id
+  cidr_block = cidrsubnet(aws_vpc.cloud.cidr_block, 8, 1)
+  # Instances launched into the subnet should be assigned a public IP address.
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.name}-cloud1"
+  }
+}
+
+# Define routing table for the network.
+resource "aws_route_table" "cloud" {
+  vpc_id = aws_vpc.cloud.id
+
+  # Route the traffic to the Internet Gateway if the host is not known (local).
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.cloud_internet.id
+  }
+}
+
+# Add route entries for cloud1 subnet to the routing table.
+resource "aws_route_table_association" "cloud1" {
+  route_table_id = aws_route_table.cloud.id
+  subnet_id      = aws_subnet.cloud1.id
+}
+
+# Define security group for the VPC.
+# It allows to specify what traffic is allowed.
+resource "aws_security_group" "cloud" {
+  name = "${var.name}-cloud"
+  vpc_id = aws_vpc.cloud.id
+
+  # Allow inbound SSH traffic from my host.
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["${var.myip}/32"]
+  }
+
+  # Allow all outbound traffic.
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Resource of my RSA public key.
+# Allows to gain access over SSH to the EC2 instance.
+resource "aws_key_pair" "ssh" {
+  key_name = "${var.name}-ssh-key"
+  public_key = file("~/.ssh/id_rsa.pub")
+}
+
 # We need the AWS AMI (Amazon Machine ID) to set up our EC2 instance.
 # Images become different as they are being upgraaded. We would like to use the latest version.
 # For this purpose I defined data source being `aws_ami` which provides ID of the Xenial Ubuntu image.
@@ -19,67 +99,17 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-# Allow access over SSH.
-resource "aws_security_group" "allow_ssh" {
-  name        = "allow-ssh"
-  description = "Allow SSH inbound traffic"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["${var.myip}/32"]
-  }
-}
-
-# Allow access over HTTP.
-resource "aws_security_group" "allow_http" {
-  name        = "allow-http"
-  description = "Allow HTTP inbound traffic"
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-
-# Allow all outbound traffic (over all protocols).
-resource "aws_security_group" "allow_all_outbound" {
-  name        = "allow-all-outbound"
-  description = "Allow all outbound traffic"
-
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# Resource of our RSA public key.
-# Allows to gain access over SSH to the EC2 instance.
-resource "aws_key_pair" "ssh" {
-  key_name = "${var.name}-ssh-key"
-  public_key = file("~/.ssh/id_rsa.pub")
-}
-
 # Define the EC2 resource.
 # Use AMI (Amazon Machine ID) from the datasource defined above.
 resource "aws_instance" "instance" {
   ami             = data.aws_ami.ubuntu.id
   instance_type   = var.instance_type
-  key_name = aws_key_pair.ssh.key_name
-
-  security_groups = [
-    "${aws_security_group.allow_http.name}",
-    "${aws_security_group.allow_ssh.name}",
-    "${aws_security_group.allow_all_outbound.name}"
-  ]
+  key_name        = aws_key_pair.ssh.key_name
+  security_groups = ["${aws_security_group.cloud.id}"]
+  subnet_id       = aws_subnet.cloud1.id
 
   tags = {
     Name = "${var.name}-ec2"
   }
 }
+
