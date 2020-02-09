@@ -4,7 +4,7 @@ provider "aws" {}
 # It allows to completely separate network only for this project.
 # (For the same reason, we don't want to use default VPC.)
 resource "aws_vpc" "cloud" {
-  cidr_block = "172.16.0.0/16"  
+  cidr_block = "172.16.0.0/16"
 
   tags = {
     Name = "${var.name}-cloud"
@@ -104,12 +104,11 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "instance" {
   ami             = data.aws_ami.ubuntu.id
   instance_type   = var.instance_type
-  key_name        = aws_key_pair.ssh.key_name
-  security_groups = ["${aws_security_group.cloud.id}"]
-  subnet_id       = aws_subnet.cloud1.id
+  key_name = aws_key_pair.ssh.key_name
+  security_groups = [aws_security_group.cloud.id]
+  subnet_id = aws_subnet.cloud1.id
 
   tags = {
     Name = "${var.name}-ec2"
   }
 }
-
