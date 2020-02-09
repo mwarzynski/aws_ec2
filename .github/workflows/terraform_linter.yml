@@ -1,0 +1,17 @@
+name: Terraform CI
+
+on: [push]
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Terraform
+      uses: volcano-coffee-company/setup-terraform@v1.0.3
+      with:
+        version: 0.12 # The Terraform version to download.
+    - name: Lint Terraform files
+      run: terraform fmt -check ./
