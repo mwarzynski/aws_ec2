@@ -99,16 +99,20 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-# Define the EC2 resource.
+# Define the EC2 Spot Instance Request.
 # Use AMI (Amazon Machine ID) from the datasource defined above.
-resource "aws_instance" "instance" {
+resource "aws_spot_instance_request" "instance_request" {
   ami             = data.aws_ami.ubuntu.id
   instance_type   = var.instance_type
+  spot_type       = "one-time"
   key_name        = aws_key_pair.ssh.key_name
   security_groups = [aws_security_group.cloud.id]
   subnet_id       = aws_subnet.cloud1.id
+  # We need to wait until Instance will be properly fulfilled.
+  # Otherwise, we won't be able to fetch `public_ip` which is required as output value.
+  wait_for_fulfillment = true
 
   tags = {
-    Name = "${var.name}-ec2"
+    Name = "${var.name}-ec2-request"
   }
 }

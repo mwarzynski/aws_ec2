@@ -5,7 +5,7 @@ variable "name" {
 }
 
 variable "instance_type" {
-  default     = "t2.nano"
+  default     = "t3.micro"
   type        = string
   description = "Type of the EC2 instance to create. (https://aws.amazon.com/ec2/instance-types/)"
 }
