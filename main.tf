@@ -23,7 +23,7 @@ resource "aws_internet_gateway" "cloud_internet" {
 # Create subnet network for the EC2 instance(s).
 # Let's name it with the '1' suffix as the subnet has 16-24 bits equal to 1.
 resource "aws_subnet" "cloud1" {
-  vpc_id = aws_vpc.cloud.id
+  vpc_id     = aws_vpc.cloud.id
   cidr_block = cidrsubnet(aws_vpc.cloud.cidr_block, 8, 1)
   # Instances launched into the subnet should be assigned a public IP address.
   map_public_ip_on_launch = true
@@ -53,7 +53,7 @@ resource "aws_route_table_association" "cloud1" {
 # Define security group for the VPC.
 # It allows to specify what traffic is allowed.
 resource "aws_security_group" "cloud" {
-  name = "${var.name}-cloud"
+  name   = "${var.name}-cloud"
   vpc_id = aws_vpc.cloud.id
 
   # Allow inbound SSH traffic from my host.
@@ -76,7 +76,7 @@ resource "aws_security_group" "cloud" {
 # Resource of my RSA public key.
 # Allows to gain access over SSH to the EC2 instance.
 resource "aws_key_pair" "ssh" {
-  key_name = "${var.name}-ssh-key"
+  key_name   = "${var.name}-ssh-key"
   public_key = file("~/.ssh/id_rsa.pub")
 }
 
@@ -104,9 +104,9 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "instance" {
   ami             = data.aws_ami.ubuntu.id
   instance_type   = var.instance_type
-  key_name = aws_key_pair.ssh.key_name
+  key_name        = aws_key_pair.ssh.key_name
   security_groups = [aws_security_group.cloud.id]
-  subnet_id = aws_subnet.cloud1.id
+  subnet_id       = aws_subnet.cloud1.id
 
   tags = {
     Name = "${var.name}-ec2"
