@@ -24,20 +24,47 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-# Define the EC2 Spot Instance Request.
-# Use AMI (Amazon Machine ID) from the datasource defined above.
-resource "aws_spot_instance_request" "instance_request" {
-  ami             = data.aws_ami.ubuntu.id
-  instance_type   = var.instance_type
-  spot_type       = "one-time"
-  key_name        = aws_key_pair.ssh.key_name
-  security_groups = [aws_security_group.cloud.id]
-  subnet_id       = aws_subnet.cloud1.id
-  # We need to wait until Instance will be properly fulfilled.
-  # Otherwise, we won't be able to fetch `public_ip` which is required as output value.
-  wait_for_fulfillment = true
+# Commands to run after EC2 instance was initialized.
+# We would like to run simple HTTP server to test if Load Balancer serves HTTP requests properly (rotating the instances).
+# I launch apache2 as a HTTP server which serve on port 80 by default.
+# Feel free to change the index.html contents to something more funny.
+locals {
+  ec2_init_commands = <<-EOT
+    #!/bin/bash
+    sudo apt-get update
+    sudo apt-get install -y apache2
+    sudo systemctl start apache2
+    echo "Terraform" | sudo tee /var/www/html/index.html
+    EOT
+}
 
-  tags = {
-    Name = "${var.name}-ec2-request"
+# EC2 instance launch template.
+# It's required for Auto Scaling group, as it needs to know how to initialize new instances.
+resource "aws_launch_template" "instance_template" {
+  name          = "${var.name}-ec2-template"
+  image_id      = data.aws_ami.ubuntu.id
+  instance_type = var.instance_type
+  vpc_security_group_ids = [
+    aws_security_group.cloud.id,
+    aws_security_group.cloud1.id
+  ]
+  key_name  = aws_key_pair.ssh.key_name
+  user_data = base64encode(local.ec2_init_commands)
+}
+
+# Auto Scaling group defines instances group.
+# To define policies regarding scaling instances use 'aws_autoscaling_policy'.
+resource "aws_autoscaling_group" "cloud" {
+  name             = "${var.name}-ec2-ag"
+  max_size         = 3
+  min_size         = 1
+  desired_capacity = 2
+
+  load_balancers      = [aws_elb.cloud.id]
+  vpc_zone_identifier = [aws_subnet.cloud1.id]
+
+  launch_template {
+    id      = aws_launch_template.instance_template.id
+    version = "$Latest"
   }
 }

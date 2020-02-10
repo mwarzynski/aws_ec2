@@ -1,3 +1,3 @@
-output "ec2_instance_public_ip" {
-  value = aws_spot_instance_request.instance_request.public_ip
+output "lb_host" {
+  value = aws_elb.cloud.dns_name
 }

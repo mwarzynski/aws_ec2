@@ -2,7 +2,8 @@
 # It allows to completely separate network only for this project.
 # (For the same reason, we don't want to use default VPC.)
 resource "aws_vpc" "cloud" {
-  cidr_block = "172.16.0.0/16"
+  cidr_block           = "172.16.0.0/16"
+  enable_dns_hostnames = true
 
   tags = {
     Name = "${var.name}-cloud"
@@ -56,6 +57,27 @@ resource "aws_security_group" "cloud" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["${var.myip}/32"]
+  }
+
+  # Allow all outbound traffic.
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "cloud1" {
+  name   = "${var.name}-cloud1"
+  vpc_id = aws_subnet.cloud1.vpc_id
+
+  # Allow inbound HTTP traffic.
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   # Allow all outbound traffic.
