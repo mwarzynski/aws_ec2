@@ -47,7 +47,7 @@ Automated spinning up EC2 instance with Terraform.
 There is also a separate network implementation. It may seem redundant (and it is), at least for now. I thought it would
 be a good practice to separate different project resources, so that they won't interfere.
 
-[Placeholder for the infrastructure diagram.]
+![Infrastructure diagram](docs/aws_terraform.svg)
 
 #### Setup ENVs
 
